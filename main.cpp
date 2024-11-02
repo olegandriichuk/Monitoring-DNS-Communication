@@ -6,112 +6,98 @@
 #include <netinet/udp.h>      // Для UDP-заголовків
 #include <netinet/if_ether.h> // Для Ethernet-заголовків
 #include <arpa/inet.h>        // Для перетворення IP-адрес
-#include <ctime>
+#include "printFunctions.h"
+#include "parseFunctions.h"
+int numberOfPacket = 1;
+// Функція для розбору QNAME
+//std::string parseQName(const u_char* packet, int& offset) {
+//    std::string qname;
+//    while (packet[offset] != 0) {
+//        int len = packet[offset];
+//        offset++;
+//        qname.append((const char*)&packet[offset], len);
+//        offset += len;
+//        if (packet[offset] != 0) {
+//            qname.append(".");
+//        }
+//    }
+//    offset++; // Пропустити нульовий байт
+////    std::cout << "Qname in  answer: " << qname << std::endl;
+//    return qname;
+//}
+//
+//
+//// Приклад використання у вашій функції розбору
+//std::string parseQNameForAnswer(const u_char* packet, int& offset) {
+//    std::string qname;
+////    std::cout << "Answeroffset : " << offset << std::endl;
+//    while (packet[offset] != 0) {
+//        uint8_t label_length = packet[offset];
+//
+//
+//        // Перевірка, чи є перші два біти на `11` (тобто це вказівник)
+//        if (isPointer(label_length)) {
+////            std::cout << "Has c0" << std::endl;
+//            // Зчитування зсуву з вказівника
+//            int pointer_offset = static_cast<int>(((label_length & 0x3F) << 8) | packet[offset + 1]);
+//            pointer_offset += static_cast<int>(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
+////            std::cout << "Answer offset for qname : " << pointer_offset << std::endl;
+//            offset += 2; // Пропускаємо байти вказівника
+////
+////            // Рекурсивно розбираємо вказівник
+//            qname += parseQName(packet, pointer_offset );
+//            break;
+//        } else {
+//            // Якщо це не вказівник, зчитуємо як звичайну мітку
+//            offset++;
+//            qname.append((const char*)&packet[offset], label_length);
+//            offset += label_length;
+//
+//            if (packet[offset] != 0) {
+//                qname.append(".");
+//            }
+//        }
+//    }
+//
+////    offset++; // Пропустити нульовий байт
+//    return qname;
+//}
+//
+//// Функція для розбору Question Section
+//DNSQuestion parseQuestionSection(const u_char* packet, int& offset) {
+//    DNSQuestion question;
+//    question.qname = parseQName(packet, offset);
+//    question.qtype = ntohs(*(uint16_t*)&packet[offset]);
+//    offset += 2;
+//    question.qclass = ntohs(*(uint16_t*)&packet[offset]);
+//    offset += 2;
+//    return question;
+//}
+//// Функція для розбору DNS-запису
+//
+//DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
+//    DNSRecord record;
+//    record.name = parseQNameForAnswer(packet, offset); // Читання доменного імені
+////    std::cout << record.name << "   ________\n";
+//    record.type = ntohs(*(uint16_t*)&packet[offset]);
+//    offset += 2;
+//
+//    record.dnsClass = ntohs(*(uint16_t*)&packet[offset]);
+//    offset += 2;
+//
+//    record.ttl = ntohl(*(uint32_t*)&packet[offset]);
+//    offset += 4;
+//
+//    record.rdLength = ntohs(*(uint16_t*)&packet[offset]);
+//    offset += 2;
+//
+//    // Читання RDATA
+//    record.rdata.assign(packet + offset, packet + offset + record.rdLength);
+//    offset += record.rdLength;
+//
+//    return record;
+//}
 
-// Структура для заголовка DNS
-struct DNSHeader {
-    uint16_t id;       // Ідентифікатор
-    uint16_t flags;    // Прапорці
-    uint16_t qd_count; // Кількість записів у секції Question
-    uint16_t an_count; // Кількість записів у секції Answer
-    uint16_t ns_count; // Кількість записів у секції Authority
-    uint16_t ar_count; // Кількість записів у секції Additional
-};
-struct DNSQuestion {
-    std::string qname;   // Доменне ім'я, наприклад, "example.com."
-    uint16_t qtype;      // Тип запиту (наприклад, 1 для A-запису)
-    uint16_t qclass;     // Клас запиту (зазвичай 1 для IN - Інтернет)
-};
-// Функція для перетворення QTYPE на текстове представлення
-std::string getTypeName(uint16_t qtype) {
-    switch (qtype) {
-        case 1: return "A";        // Адресний запис IPv4
-        case 28: return "AAAA";    // Адресний запис IPv6
-        case 5: return "CNAME";    // Канонічне ім'я
-        case 15: return "MX";      // Поштовий обмін
-        case 2: return "NS";       // Сервер доменних імен
-        default: return "UNKNOWN"; // Невідомий тип
-    }
-}
-
-// Функція для перетворення QCLASS на текстове представлення
-std::string getClassName(uint16_t qclass) {
-    return (qclass == 1) ? "IN" : "UNKNOWN"; // IN - Інтернет, інші класи можна додати
-}
-
-// Функція для виводу даних Question Section
-void printQuestionSection(const DNSQuestion& question) {
-    std::cout << "[Question Section]\n"
-              << " " << question.qname << " "
-              << getClassName(question.qclass) << " "
-              << getTypeName(question.qtype) << "\n";
-}
-// Функція для отримання поточної дати і часу у потрібному форматі
-std::string getCurrentTimestamp() {
-    time_t now = time(0);
-    struct tm tstruct;
-    char buf[80];
-    tstruct = *localtime(&now);
-    strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
-    return buf;
-}
-
-// Функція для виводу базової інформації про DNS-запит
-void printBasicDNSInfo(const struct ip* ip_header, const DNSHeader* dns_header, bool isResponse) {
-    uint16_t qd_count = ntohs(dns_header->qd_count);
-    uint16_t an_count = ntohs(dns_header->an_count);
-    uint16_t ns_count = ntohs(dns_header->ns_count);
-    uint16_t ar_count = ntohs(dns_header->ar_count);
-
-    std::string timestamp = getCurrentTimestamp();
-    std::cout << timestamp << " "
-              << inet_ntoa(ip_header->ip_src) << " -> "
-              << inet_ntoa(ip_header->ip_dst) << " ("
-              << (isResponse ? "R" : "Q") << " "
-              << qd_count << "/"
-              << an_count << "/"
-              << ns_count << "/"
-              << ar_count << ")\n";
-    std::cout << "----------------------------------------\n";
-}
-
-// Функція для виводу детальної інформації про DNS-запит
-void printVerboseDNSInfo(const struct ip* ip_header, const struct udphdr* udp_header, const DNSHeader* dns_header) {
-    std::string timestamp = getCurrentTimestamp();
-    uint16_t identifier = ntohs(dns_header->id);
-    uint16_t flags = ntohs(dns_header->flags);
-
-    // Розбір прапорців
-    bool qr = flags & 0x8000;
-    uint8_t opcode = (flags >> 11) & 0x0F;
-    bool aa = flags & 0x0400;
-    bool tc = flags & 0x0200;
-    bool rd = flags & 0x0100;
-    bool ra = flags & 0x0080;
-    bool ad = flags & 0x0020;
-    bool cd = flags & 0x0010;
-    uint8_t rcode = flags & 0x000F;
-
-    // Вивід детальної інформації
-    std::cout << "Timestamp: " << timestamp << "\n"
-              << "SrcIP: " << inet_ntoa(ip_header->ip_src) << "\n"
-              << "DstIP: " << inet_ntoa(ip_header->ip_dst) << "\n"
-              << "SrcPort: UDP/" << ntohs(udp_header->uh_sport) << "\n"
-              << "DstPort: UDP/" << ntohs(udp_header->uh_dport) << "\n"
-              << "Identifier: 0x" << std::hex << identifier << std::dec << "\n"
-              << "Flags: QR=" << qr
-              << ", OPCODE=" << (int)opcode
-              << ", AA=" << aa
-              << ", TC=" << tc
-              << ", RD=" << rd
-              << ", RA=" << ra
-              << ", AD=" << ad
-              << ", CD=" << cd
-              << ", RCODE=" << (int)rcode << "\n"
-              << "====================\n";
-}
-
-// Функція обробки пакетів
 void processPacket(const u_char* packet, bool verbose) {
     // Отримання Ethernet-заголовка
     struct ether_header* eth_header = (struct ether_header*) packet;
@@ -134,9 +120,23 @@ void processPacket(const u_char* packet, bool verbose) {
                 // Визначення, чи це запит чи відповідь (QR-біт)
                 bool isResponse = ntohs(dns_header->flags) & 0x8000;
 
-                // Вивід інформації
+                // Розбір Question Section
+                int offset = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + sizeof(struct DNSHeader);
+
+                DNSQuestion question = parseQuestionSection(packet, offset);
+                std::vector<DNSRecord> answers;
+                for (int i = 0; i < ntohs(dns_header->an_count); ++i) {
+                    answers.push_back(parseDNSRecord(packet, offset));
+                }
+
                 if (verbose) {
+                    std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
                     printVerboseDNSInfo(ip_header, udp_header, dns_header);
+                    printQuestionSection(question);
+                    if(dns_header->an_count >0)
+                    printAnswerSection(answers); // Виведення всіх відповідей
+                    numberOfPacket++;
+                    std::cout << "====================\n";
                 } else {
                     printBasicDNSInfo(ip_header, dns_header, isResponse);
                 }
