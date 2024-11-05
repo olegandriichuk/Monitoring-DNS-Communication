@@ -3,157 +3,141 @@
 #include <string>
 #include <pcap.h>
 #include <netinet/ip.h>       // Для IP-заголовків
+#include <netinet/ip6.h>      // Для IP-заголовків IPv6
 #include <netinet/udp.h>      // Для UDP-заголовків
 #include <netinet/if_ether.h> // Для Ethernet-заголовків
 #include <arpa/inet.h>        // Для перетворення IP-адрес
 #include "printFunctions.h"
 #include "parseFunctions.h"
+
 int numberOfPacket = 1;
-// Функція для розбору QNAME
-//std::string parseQName(const u_char* packet, int& offset) {
-//    std::string qname;
-//    while (packet[offset] != 0) {
-//        int len = packet[offset];
-//        offset++;
-//        qname.append((const char*)&packet[offset], len);
-//        offset += len;
-//        if (packet[offset] != 0) {
-//            qname.append(".");
-//        }
-//    }
-//    offset++; // Пропустити нульовий байт
-////    std::cout << "Qname in  answer: " << qname << std::endl;
-//    return qname;
-//}
-//
-//
-//// Приклад використання у вашій функції розбору
-//std::string parseQNameForAnswer(const u_char* packet, int& offset) {
-//    std::string qname;
-////    std::cout << "Answeroffset : " << offset << std::endl;
-//    while (packet[offset] != 0) {
-//        uint8_t label_length = packet[offset];
-//
-//
-//        // Перевірка, чи є перші два біти на `11` (тобто це вказівник)
-//        if (isPointer(label_length)) {
-////            std::cout << "Has c0" << std::endl;
-//            // Зчитування зсуву з вказівника
-//            int pointer_offset = static_cast<int>(((label_length & 0x3F) << 8) | packet[offset + 1]);
-//            pointer_offset += static_cast<int>(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
-////            std::cout << "Answer offset for qname : " << pointer_offset << std::endl;
-//            offset += 2; // Пропускаємо байти вказівника
-////
-////            // Рекурсивно розбираємо вказівник
-//            qname += parseQName(packet, pointer_offset );
-//            break;
-//        } else {
-//            // Якщо це не вказівник, зчитуємо як звичайну мітку
-//            offset++;
-//            qname.append((const char*)&packet[offset], label_length);
-//            offset += label_length;
-//
-//            if (packet[offset] != 0) {
-//                qname.append(".");
-//            }
-//        }
-//    }
-//
-////    offset++; // Пропустити нульовий байт
-//    return qname;
-//}
-//
-//// Функція для розбору Question Section
-//DNSQuestion parseQuestionSection(const u_char* packet, int& offset) {
-//    DNSQuestion question;
-//    question.qname = parseQName(packet, offset);
-//    question.qtype = ntohs(*(uint16_t*)&packet[offset]);
-//    offset += 2;
-//    question.qclass = ntohs(*(uint16_t*)&packet[offset]);
-//    offset += 2;
-//    return question;
-//}
-//// Функція для розбору DNS-запису
-//
-//DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
-//    DNSRecord record;
-//    record.name = parseQNameForAnswer(packet, offset); // Читання доменного імені
-////    std::cout << record.name << "   ________\n";
-//    record.type = ntohs(*(uint16_t*)&packet[offset]);
-//    offset += 2;
-//
-//    record.dnsClass = ntohs(*(uint16_t*)&packet[offset]);
-//    offset += 2;
-//
-//    record.ttl = ntohl(*(uint32_t*)&packet[offset]);
-//    offset += 4;
-//
-//    record.rdLength = ntohs(*(uint16_t*)&packet[offset]);
-//    offset += 2;
-//
-//    // Читання RDATA
-//    record.rdata.assign(packet + offset, packet + offset + record.rdLength);
-//    offset += record.rdLength;
-//
-//    return record;
-//}
 
 void processPacket(const u_char* packet, bool verbose) {
     // Отримання Ethernet-заголовка
     struct ether_header* eth_header = (struct ether_header*) packet;
 
-    // Перевірка, чи є це IP-пакетом
+    // Перевірка, чи є це IP або IPv6 пакетом
     if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
-        // Отримання IP-заголовка
+        // Обробка IPv4
         struct ip* ip_header = (struct ip*)(packet + sizeof(struct ether_header));
-
-        // Визначення протоколу (UDP)
         if (ip_header->ip_p == IPPROTO_UDP) {
             // Отримання UDP-заголовка
             struct udphdr* udp_header = (struct udphdr*)(packet + sizeof(struct ether_header) + sizeof(struct ip));
 
             // Перевірка, чи використовується порт 53 (DNS)
             if (ntohs(udp_header->uh_dport) == 53 || ntohs(udp_header->uh_sport) == 53) {
-                // Отримання DNS-заголовка
+                // Обробка DNS-запиту/відповіді
                 DNSHeader* dns_header = (DNSHeader*)(packet + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
-
-                // Визначення, чи це запит чи відповідь (QR-біт)
                 bool isResponse = ntohs(dns_header->flags) & 0x8000;
-
-                // Розбір Question Section
                 int offset = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + sizeof(struct DNSHeader);
-
-                DNSQuestion question = parseQuestionSection(packet, offset);
+                DNSQuestion question;
+                if(dns_header->qd_count > 0)
+                question = parseQuestionSection(packet, offset);
                 std::vector<DNSRecord> answers;
+                answers.reserve(ntohs(dns_header->an_count));
                 for (int i = 0; i < ntohs(dns_header->an_count); ++i) {
+                    // Parse the DNS record
                     answers.push_back(parseDNSRecord(packet, offset));
                 }
 
+                std::vector<DNSRecord> authorities;
+                authorities.reserve(ntohs(dns_header->ns_count));
+                for (int i = 0; i < ntohs(dns_header->ns_count); ++i) {
+                    authorities.push_back(parseDNSRecord(packet, offset));
+                }
+                std::vector<DNSRecord> additionals;
+                additionals.reserve(ntohs(dns_header->ar_count));
+                for (int i = 0; i < ntohs(dns_header->ar_count); ++i) {
+                    additionals.push_back(parseDNSRecord(packet, offset));
+                }
                 if (verbose) {
                     std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
-                    printVerboseDNSInfo(ip_header, udp_header, dns_header);
+                    printVerboseDNSInfo(ip_header, udp_header, dns_header, false);
                     printQuestionSection(question);
-                    if(dns_header->an_count >0)
-                    printAnswerSection(answers); // Виведення всіх відповідей
+//                    std::cout << "ANSWERS SIZE: " << answers.size() << std::endl
+//                              << "AUTHORITIES SIZE: " << authorities.size() << std::endl
+//                              << "ADDITIONALS SIZE: " << additionals.size() << std::endl;
+                    if (!answers.empty()) {
+                        printAnswerSection(answers);
+                    }
+                    if (!authorities.empty()) {
+                        printAuthoritySection(authorities);
+                    }
+                    if (!additionals.empty()) {
+                        printAdditionalSection(additionals);
+                    }
                     numberOfPacket++;
                     std::cout << "====================\n";
                 } else {
-                    printBasicDNSInfo(ip_header, dns_header, isResponse);
+                    printBasicDNSInfo(ip_header, dns_header, isResponse, false);
+                }
+            }
+        }
+    } else if (ntohs(eth_header->ether_type) == ETHERTYPE_IPV6) {
+        // Обробка IPv6
+        auto* ip6_header = (struct ip6_hdr*)(packet + sizeof(struct ether_header));
+        if (ip6_header->ip6_nxt == IPPROTO_UDP) {
+            // Отримання UDP-заголовка
+            struct udphdr* udp_header = (struct udphdr*)(packet + sizeof(struct ether_header) + sizeof(struct ip6_hdr));
+
+            // Перевірка, чи використовується порт 53 (DNS)
+            if (ntohs(udp_header->uh_dport) == 53 || ntohs(udp_header->uh_sport) == 53) {
+                // Обробка DNS-запиту/відповіді
+                auto* dns_header = (DNSHeader*)(packet + sizeof(struct ether_header) + sizeof(struct ip6_hdr) + sizeof(struct udphdr));
+                bool isResponse = ntohs(dns_header->flags) & 0x8000;
+                int offset = sizeof(struct ether_header) + sizeof(struct ip6_hdr) + sizeof(struct udphdr) + sizeof(struct DNSHeader);
+                DNSQuestion question;
+                if(dns_header->qd_count > 0)
+                    question = parseQuestionSection(packet, offset);
+                std::vector<DNSRecord> answers;
+                answers.reserve(ntohs(dns_header->an_count));
+                for (int i = 0; i < ntohs(dns_header->an_count); ++i) {
+                    // Parse the DNS record
+                    answers.push_back(parseDNSRecord(packet, offset));
+                }
+
+                std::vector<DNSRecord> authorities;
+                authorities.reserve(ntohs(dns_header->ns_count));
+                for (int i = 0; i < ntohs(dns_header->ns_count); ++i) {
+                    authorities.push_back(parseDNSRecord(packet, offset));
+                }
+                std::vector<DNSRecord> additionals;
+                additionals.reserve(ntohs(dns_header->ar_count));
+                for (int i = 0; i < ntohs(dns_header->ar_count); ++i) {
+                    additionals.push_back(parseDNSRecord(packet, offset));
+                }
+                if (verbose) {
+                    std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
+                    printVerboseDNSInfo(ip6_header, udp_header, dns_header, true);
+                    printQuestionSection(question);
+//                    std::cout << "ANSWERS SIZE: " << answers.size() << std::endl
+//                              << "AUTHORITIES SIZE: " << authorities.size() << std::endl
+//                              << "ADDITIONALS SIZE: " << additionals.size() << std::endl;
+                    if (!answers.empty()) {
+                        printAnswerSection(answers);
+                    }
+                    if (!authorities.empty()) {
+                        printAuthoritySection(authorities);
+                    }
+                    if (!additionals.empty()) {
+                        printAdditionalSection(additionals);
+                    }
+                    numberOfPacket++;
+                    std::cout << "====================\n";
+                }  else {
+                    printBasicDNSInfo(ip6_header, dns_header, isResponse, true); // Pass 'true' for IPv6
                 }
             }
         }
     }
 }
 
-// Основна функція
 int main(int argc, char* argv[]) {
-    // Змінні для зберігання значень аргументів
     std::string interface;
     std::string pcapfile;
     bool verbose = false;
 
     int option;
-    // Парсинг аргументів за допомогою getopt
     while ((option = getopt(argc, argv, "i:p:v")) != -1) {
         switch (option) {
             case 'i':
@@ -171,13 +155,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Перевірка, чи заданий хоча б один із параметрів -i або -p
     if (interface.empty() && pcapfile.empty()) {
         std::cerr << "Please provide either -i <interface> or -p <pcapfile>\n";
         return 1;
     }
 
-    // Відкриття інтерфейсу або файлу PCAP для захоплення
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t* handle;
 
@@ -195,7 +177,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Захоплення пакетів та обробка
     pcap_loop(handle, 0, [](u_char* args, const struct pcap_pkthdr* header, const u_char* packet) {
         processPacket(packet, *(bool*)args);
     }, (u_char*)&verbose);

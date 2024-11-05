@@ -30,6 +30,6 @@ struct DNSRecord {
     uint16_t dnsClass;   // Клас запису (CLASS), зазвичай IN (1)
     uint32_t ttl;        // Час життя запису в секундах (TTL)
     uint16_t rdLength;   // Довжина даних у полі RDATA (RDLENGTH)
-    std::vector<uint8_t> rdata; // Дані запису (RDATA), формат залежить від типу запису
+    std::string rdata; // Дані запису (RDATA), формат залежить від типу запису
 };
 #endif //ISA_DNSSTRUCTURES_H

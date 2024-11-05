@@ -10,11 +10,16 @@
 #include <arpa/inet.h>
 #include <netinet/udp.h>
 #include "parseFunctions.h"
-void printVerboseDNSInfo(const struct ip* ip_header, const struct udphdr* udp_header, const DNSHeader* dns_header);
+void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header, const DNSHeader* dns_header, bool isIPv6);
+
+void printAdditionalSection(const std::vector<DNSRecord>& answers);
 
 void printAnswerSection(const std::vector<DNSRecord>& answers);
 
+void printAuthoritySection(const std::vector<DNSRecord>& answers);
+
+void printSection(const std::vector<DNSRecord>& answers);
 void printQuestionSection(const DNSQuestion& question);
 
-void printBasicDNSInfo(const struct ip* ip_header, const DNSHeader* dns_header, bool isResponse);
+void printBasicDNSInfo(const void* ip_header, const DNSHeader* dns_header, bool isResponse, bool isIPv6);
 #endif //ISA_PRINTFUNCTIONS_H

@@ -22,7 +22,9 @@ std::string getTypeName(uint16_t qtype) {
         case 28: return "AAAA";    // Адресний запис IPv6
         case 5: return "CNAME";    // Канонічне ім'я
         case 15: return "MX";      // Поштовий обмін
-        case 2: return "NS";       // Сервер доменних імен
+        case 2: return "NS";
+        case 6: return "SOA";// Сервер доменних імен
+        case 33: return "SRV";
         default: return "UNKNOWN"; // Невідомий тип
     }
 }

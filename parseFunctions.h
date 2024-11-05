@@ -6,6 +6,9 @@
 #define ISA_PARSEFUNCTIONS_H
 #include "dnsStructures.h"
 #include "helpFunctions.h"
+#include <stdexcept>
+#include <cstring>
+#include <sstream>
 #include <pcap.h>             // For pcap-related functions
 #include <netinet/if_ether.h> // For struct ether_header
 #include <netinet/ip.h>       // For struct ip
