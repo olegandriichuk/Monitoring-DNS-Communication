@@ -9,46 +9,48 @@
 #include <arpa/inet.h>        // Для перетворення IP-адрес
 #include "printFunctions.h"
 #include "parseFunctions.h"
-
+#include <fstream>
 int numberOfPacket = 1;
 
 void processPacket(const u_char* packet, bool verbose) {
     // Отримання Ethernet-заголовка
-    struct ether_header* eth_header = (struct ether_header*) packet;
+    auto* eth_header = (struct ether_header*) packet;
 
     // Перевірка, чи є це IP або IPv6 пакетом
     if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
         // Обробка IPv4
-        struct ip* ip_header = (struct ip*)(packet + sizeof(struct ether_header));
+        auto* ip_header = (struct ip*)(packet + sizeof(struct ether_header));
         if (ip_header->ip_p == IPPROTO_UDP) {
             // Отримання UDP-заголовка
-            struct udphdr* udp_header = (struct udphdr*)(packet + sizeof(struct ether_header) + sizeof(struct ip));
+            auto* udp_header = (struct udphdr*)(packet + sizeof(struct ether_header) + sizeof(struct ip));
 
             // Перевірка, чи використовується порт 53 (DNS)
             if (ntohs(udp_header->uh_dport) == 53 || ntohs(udp_header->uh_sport) == 53) {
                 // Обробка DNS-запиту/відповіді
-                DNSHeader* dns_header = (DNSHeader*)(packet + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
+                auto* dns_header = (DNSHeader*)(packet + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
                 bool isResponse = ntohs(dns_header->flags) & 0x8000;
                 int offset = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + sizeof(struct DNSHeader);
                 DNSQuestion question;
                 if(dns_header->qd_count > 0)
                 question = parseQuestionSection(packet, offset);
+
+
                 std::vector<DNSRecord> answers;
                 answers.reserve(ntohs(dns_header->an_count));
                 for (int i = 0; i < ntohs(dns_header->an_count); ++i) {
                     // Parse the DNS record
-                    answers.push_back(parseDNSRecord(packet, offset));
+                    answers.push_back(parseDNSRecord(packet, offset, false));
                 }
 
                 std::vector<DNSRecord> authorities;
                 authorities.reserve(ntohs(dns_header->ns_count));
                 for (int i = 0; i < ntohs(dns_header->ns_count); ++i) {
-                    authorities.push_back(parseDNSRecord(packet, offset));
+                    authorities.push_back(parseDNSRecord(packet, offset, false));
                 }
                 std::vector<DNSRecord> additionals;
                 additionals.reserve(ntohs(dns_header->ar_count));
                 for (int i = 0; i < ntohs(dns_header->ar_count); ++i) {
-                    additionals.push_back(parseDNSRecord(packet, offset));
+                    additionals.push_back(parseDNSRecord(packet, offset, false));
                 }
                 if (verbose) {
                     std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
@@ -78,7 +80,7 @@ void processPacket(const u_char* packet, bool verbose) {
         auto* ip6_header = (struct ip6_hdr*)(packet + sizeof(struct ether_header));
         if (ip6_header->ip6_nxt == IPPROTO_UDP) {
             // Отримання UDP-заголовка
-            struct udphdr* udp_header = (struct udphdr*)(packet + sizeof(struct ether_header) + sizeof(struct ip6_hdr));
+            auto* udp_header = (struct udphdr*)(packet + sizeof(struct ether_header) + sizeof(struct ip6_hdr));
 
             // Перевірка, чи використовується порт 53 (DNS)
             if (ntohs(udp_header->uh_dport) == 53 || ntohs(udp_header->uh_sport) == 53) {
@@ -93,18 +95,18 @@ void processPacket(const u_char* packet, bool verbose) {
                 answers.reserve(ntohs(dns_header->an_count));
                 for (int i = 0; i < ntohs(dns_header->an_count); ++i) {
                     // Parse the DNS record
-                    answers.push_back(parseDNSRecord(packet, offset));
+                    answers.push_back(parseDNSRecord(packet, offset, true));
                 }
 
                 std::vector<DNSRecord> authorities;
                 authorities.reserve(ntohs(dns_header->ns_count));
                 for (int i = 0; i < ntohs(dns_header->ns_count); ++i) {
-                    authorities.push_back(parseDNSRecord(packet, offset));
+                    authorities.push_back(parseDNSRecord(packet, offset, true));
                 }
                 std::vector<DNSRecord> additionals;
                 additionals.reserve(ntohs(dns_header->ar_count));
                 for (int i = 0; i < ntohs(dns_header->ar_count); ++i) {
-                    additionals.push_back(parseDNSRecord(packet, offset));
+                    additionals.push_back(parseDNSRecord(packet, offset, true));
                 }
                 if (verbose) {
                     std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
@@ -131,14 +133,41 @@ void processPacket(const u_char* packet, bool verbose) {
         }
     }
 }
+void saveDomainsToFile(const std::string& filename) {
+    std::ofstream outfile(filename);
+    if (!outfile) {
+        std::cerr << "Error: Could not open file " << filename << " for writing.\n";
+        return;
+    }
+    for (const auto& domain : domainNames) {
+        outfile << domain << '\n';
+    }
+    outfile.close();
+    std::cout << "Domains saved to " << filename << "\n";
+}
+
+void saveDomainTranslationsToFile(const std::string& filename) {
+    std::ofstream outfile(filename);
+    if (!outfile) {
+        std::cerr << "Error: Could not open file " << filename << " for writing.\n";
+        return;
+    }
+    for (const auto& translation : domainTranslations) {
+        outfile << translation <<'\n';
+    }
+    outfile.close();
+    std::cout << "Domain translations saved to " << filename << "\n";
+}
 
 int main(int argc, char* argv[]) {
     std::string interface;
     std::string pcapfile;
+    std::string domainsfile;
+    std::string translationfile;
     bool verbose = false;
 
     int option;
-    while ((option = getopt(argc, argv, "i:p:v")) != -1) {
+    while ((option = getopt(argc, argv, "i:p:vd:t:")) != -1) {
         switch (option) {
             case 'i':
                 interface = optarg;
@@ -148,6 +177,12 @@ int main(int argc, char* argv[]) {
                 break;
             case 'v':
                 verbose = true;
+                break;
+            case 'd':
+                domainsfile = optarg;
+                break;
+            case 't':
+                translationfile = optarg;
                 break;
             default:
                 std::cerr << "Unknown option: " << option << "\n";
@@ -181,6 +216,13 @@ int main(int argc, char* argv[]) {
         processPacket(packet, *(bool*)args);
     }, (u_char*)&verbose);
 
+    if (!domainsfile.empty()) {
+        saveDomainsToFile(domainsfile);
+    }
+
+    if (!translationfile.empty()) {
+        saveDomainTranslationsToFile(translationfile);
+    }
     pcap_close(handle);
     return 0;
 }

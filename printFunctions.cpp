@@ -3,7 +3,7 @@
 
 void printQuestionSection(const DNSQuestion& question) {
     std::cout << "[Question Section]\n"
-              << question.qname << " "
+              << question.qname << ". "
               << getClassName(question.qclass) << " "
               << getTypeName(question.qtype) << "\n";
 }
@@ -100,13 +100,16 @@ void printAuthoritySection(const std::vector<DNSRecord>& answers){
 void printSection(const std::vector<DNSRecord>& answers) {
 //    std::cout << "[Answer Section]\n";
     for (const auto& record : answers) {
-        std::cout << record.name << " " << record.ttl << " "
+        std::cout << record.name << ". " << record.ttl << " "
                   << getClassName(record.dnsClass) << " "
                   << getTypeName(record.type) << " ";
 
         // Вивід RDATA в залежності від типу запису
-        if (record.type == 1 || record.type == 28 || record.type == 2 || record.type == 5 || record.type == 6) {
+        if (record.type == 1 || record.type == 28
+        || record.type == 6 || record.type == 15 || record.type == 33) {
             std::cout << record.rdata;
+        }else if ( record.type == 2 || record.type == 5){
+            std::cout << record.rdata << ".";
         }
         else {
             std::cout << "NOT SUPPORTED";

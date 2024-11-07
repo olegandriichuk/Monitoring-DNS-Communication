@@ -3,6 +3,10 @@ project(ISA)
 
 set(CMAKE_CXX_STANDARD 14)
 
+# Find the pcap library
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PCAP REQUIRED libpcap)
+
 add_executable(ISA
         main.cpp
         printFunctions.cpp
@@ -12,3 +16,6 @@ add_executable(ISA
         helpFunctions.h
         parseFunctions.cpp
         parseFunctions.h)
+
+# Link the pcap library
+target_link_libraries(ISA PRIVATE ${PCAP_LIBRARIES})

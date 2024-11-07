@@ -3,6 +3,8 @@
 //
 
 #include "parseFunctions.h"
+std::vector<std::string> domainNames;
+std::vector<std::string> domainTranslations;
 std::string parseQName(const u_char* packet, int& offset) {
     std::string qname;
     while (packet[offset] != 0) {
@@ -14,52 +16,23 @@ std::string parseQName(const u_char* packet, int& offset) {
             qname.append(".");
         }
     }
+//    if (qname.empty() || qname.back() != '.') {
+//        qname.append(".");
+//    }
     offset++; // Пропустити нульовий байт
 //    std::cout << "Qname in  record: " << qname << std::endl;
     return qname;
 }
 
+void storeDomainTranslation(const std::string& domain, const std::string& ipAddress) {
+    std::string entry = domain + " " + ipAddress;
+    domainTranslations.push_back(entry);
+}
 
-// Приклад використання у вашій функції розбору
-//std::string parseQNameForAnswer(const u_char* packet, int& offset) {
-//    std::string qname;
-////    std::cout << "Answeroffset : " << offset << std::endl;
-//    while (packet[offset] != 0) {
-//        uint8_t label_length = packet[offset];
-//
-//
-//        // Перевірка, чи є перші два біти на `11` (тобто це вказівник)
-//        if (isPointer(label_length)) {
-////            std::cout << "Has c0" << std::endl;
-//            // Зчитування зсуву з вказівника
-//            int pointer_offset = static_cast<int>(((label_length & 0x3F) << 8) | packet[offset + 1]);
-//            pointer_offset += static_cast<int>(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
-////            std::cout << "Answer offset for qname : " << pointer_offset << std::endl;
-//            offset += 2; // Пропускаємо байти вказівника
-////
-////            // Рекурсивно розбираємо вказівник
-//            qname += parseQName(packet, pointer_offset );
-//            break;
-//        } else {
-//            // Якщо це не вказівник, зчитуємо як звичайну мітку
-//            offset++;
-//            qname.append((const char*)&packet[offset], label_length);
-//            offset += label_length;
-//
-//            if (packet[offset] != 0) {
-//                qname.append(".");
-//            }
-////            offset++;
-//        }
-//    }
-//
-////    offset++; // Пропустити нульовий байт
-//    return qname;
-//}
 
-std::string parseQNameForAnswer(const u_char* packet, int& offset) {
+std::string parseQNameForAnswer(const u_char* packet, int& offset, bool isIPv6) {
     std::string qname;
-    int originalOffset = offset;  // Зберігаємо початкове зміщення
+    int originalOffset = 0;  // Зберігаємо початкове зміщення
     bool jumped = false;          // Відстежуємо, чи використовували вказівник
     int safetyCounter = 0;        // Лічильник безпеки для запобігання нескінченному циклу
 
@@ -67,6 +40,7 @@ std::string parseQNameForAnswer(const u_char* packet, int& offset) {
         if (safetyCounter++ > 100) {
             throw std::runtime_error("Помилка: можливий некоректний пакет або нескінченний цикл");
         }
+
 
         uint8_t label_length = packet[offset];
 
@@ -79,12 +53,18 @@ std::string parseQNameForAnswer(const u_char* packet, int& offset) {
         // Перевірка, чи це вказівник (два старші біти повинні бути 11)
         if ((label_length & 0xC0) == 0xC0) {
             if (!jumped) {
+                jumped = true;
                 originalOffset = offset + 2;  // Зберігаємо зміщення для продовження після стрибка
             }
             // Отримуємо нове зміщення з вказівника
             offset = ((label_length & 0x3F) << 8) | packet[offset + 1];
-            offset += static_cast<int>(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
-            jumped = true;
+            if(isIPv6){
+                offset += static_cast<int>(sizeof(struct ether_header) + sizeof(struct ip6_hdr) + sizeof(struct udphdr));
+            } else{
+                offset += static_cast<int>(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
+            }
+
+            continue;
         } else {
             // Це звичайна мітка, обробляємо її
             offset++;
@@ -94,7 +74,7 @@ std::string parseQNameForAnswer(const u_char* packet, int& offset) {
         }
     }
 
-    // Видаляємо останню крапку, якщо вона є
+
     if (!qname.empty() && qname.back() == '.') {
         qname.pop_back();
     }
@@ -103,7 +83,7 @@ std::string parseQNameForAnswer(const u_char* packet, int& offset) {
     if (jumped) {
         offset = originalOffset;
     }
-
+//    std::cout << "Parsed QName: " << qname << std::endl;
     return qname;
 }
 
@@ -112,10 +92,10 @@ std::string parseQNameForAnswer(const u_char* packet, int& offset) {
 
 // Функція для розбору DNS-запису
 
-DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
+DNSRecord parseDNSRecord(const u_char* packet, int& offset, bool isIPv6) {
     DNSRecord record;
-    record.name = parseQNameForAnswer(packet, offset); // Читання доменного імені
-
+    record.name = parseQNameForAnswer(packet, offset, isIPv6); // Читання доменного імені
+//    std::cout << "Parsed Name for A Record: " << record.name << std::endl;
     record.type = ntohs(*(uint16_t*)&packet[offset]);
     offset += 2;
 //    std::cout <<"Record type" << record.type << std::endl;
@@ -127,6 +107,11 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
 
     record.rdLength = ntohs(*(uint16_t*)&packet[offset]);
     offset += 2;
+    if(record.type == 1 || record.type == 28 || record.type == 2 || record.type == 5 || record.type == 6 || record.type == 15 || record.type == 33){
+        if (std::find(domainNames.begin(), domainNames.end(), record.name) == domainNames.end()) {
+            domainNames.push_back(record.name);
+        }
+    }
     if(record.type != 1 && record.type != 28 && record.type != 2 && record.type != 5 && record.type != 6 && record.type != 15 && record.type != 33){
         offset+=record.rdLength;
         return record;
@@ -140,14 +125,43 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
                            std::to_string(static_cast<unsigned char>(packet[offset + 3]));
             offset += 4;
         }
+        storeDomainTranslation(record.name, record.rdata);
     }
-        // Обробка записів типу NS
-    if (record.type == 2) {
-        record.rdata = parseQNameForAnswer(packet, offset);
+//    std::cout << "Record Name: " << record.name << ", Type: " << record.type << std::endl;
+
+    // Обробка записів типу NS
+     if (record.type == 2) {
+        record.rdata = parseQNameForAnswer(packet, offset, isIPv6);
+        if (std::find(domainNames.begin(), domainNames.end(), record.rdata) == domainNames.end()) {
+            domainNames.push_back(record.rdata);
+        }
     }
         // Обробка записів типу CNAME
     if (record.type == 5) {
-        record.rdata = parseQNameForAnswer(packet, offset);
+        record.rdata = parseQNameForAnswer(packet, offset, isIPv6);
+        if (std::find(domainNames.begin(), domainNames.end(), record.rdata) == domainNames.end()) {
+            domainNames.push_back(record.rdata);
+        }
+    }
+    // parsing MX Type
+    if (record.type == 15) { // MX record
+        if (record.rdLength >= 2) { // Ensure there's enough data for priority
+            uint16_t priority = ntohs(*(uint16_t*)&packet[offset]);
+            offset += 2;
+
+            // Parse the domain name associated with this MX record
+            std::string exchange = parseQNameForAnswer(packet, offset, isIPv6);
+            if (std::find(domainNames.begin(), domainNames.end(), exchange) == domainNames.end()) {
+                domainNames.push_back(exchange);
+            }
+            // Store the result as "priority exchange" (for example, "10 mail.example.com")
+            std::stringstream ss;
+            ss << priority << " " << exchange << ".";
+            record.rdata = ss.str();
+        } else {
+            // Skip invalid MX record
+            offset += record.rdLength;
+        }
     }
         // Обробка записів типу SOA
     if (record.type == 6) {
@@ -155,11 +169,17 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
         std::stringstream ss;
 
         // Основний сервер і пошта відповідального
-        std::string primaryNS = parseQNameForAnswer(packet, offset);
-        ss << primaryNS << " ";
+        std::string primaryNS = parseQNameForAnswer(packet, offset, isIPv6);
+        if (std::find(domainNames.begin(), domainNames.end(), primaryNS) == domainNames.end()) {
+            domainNames.push_back(primaryNS);
+        }
+        ss << primaryNS << ". ";
 
-        std::string respAuthorityMailbox = parseQNameForAnswer(packet, offset);
-        ss << respAuthorityMailbox << " ";
+        std::string respAuthorityMailbox = parseQNameForAnswer(packet, offset, isIPv6);
+        if (std::find(domainNames.begin(), domainNames.end(), respAuthorityMailbox) == domainNames.end()) {
+            domainNames.push_back(respAuthorityMailbox);
+        }
+        ss << respAuthorityMailbox << ". ";
 
         // Обробка полів з фіксованою довжиною: серійний номер, оновлення, повторна спроба, закінчення терміну, мінімальний TTL
         uint32_t serial, refresh, retry, expire, minimum;
@@ -196,7 +216,24 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
             inet_ntop(AF_INET6, &packet[offset], ipv6Address, INET6_ADDRSTRLEN);
             record.rdata = std::string(ipv6Address);
             offset += 16;
+            storeDomainTranslation(record.name, record.rdata);
         }
+    }
+    if (record.type == 33) {  // SRV record
+        uint16_t priority = ntohs(*(uint16_t*)&packet[offset]);
+        offset += 2;
+        uint16_t weight = ntohs(*(uint16_t*)&packet[offset]);
+        offset += 2;
+        uint16_t port = ntohs(*(uint16_t*)&packet[offset]);
+        offset += 2;
+
+        std::string target = parseQNameForAnswer(packet, offset, isIPv6);  // SRV target name with trailing dot
+        if (std::find(domainNames.begin(), domainNames.end(), target) == domainNames.end()) {
+            domainNames.push_back(target);
+        }
+        std::stringstream ss;
+        ss << priority << " " << weight << " " << port << " " << target << ".";
+        record.rdata = ss.str();
     }
 
     return record;
@@ -206,6 +243,9 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset) {
 DNSQuestion parseQuestionSection(const u_char* packet, int& offset) {
     DNSQuestion question;
     question.qname = parseQName(packet, offset);
+    if (std::find(domainNames.begin(), domainNames.end(), question.qname) == domainNames.end()) {
+        domainNames.push_back(question.qname);
+    }
     question.qtype = ntohs(*(uint16_t*)&packet[offset]);
     offset += 2;
     question.qclass = ntohs(*(uint16_t*)&packet[offset]);
