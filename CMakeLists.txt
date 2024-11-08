@@ -15,7 +15,11 @@ add_executable(ISA
         helpFunctions.cpp
         helpFunctions.h
         parseFunctions.cpp
-        parseFunctions.h)
+        parseFunctions.h
+        processPacket.cpp
+        processPacket.h
+        filesOperations.cpp
+        filesOperations.h)
 
 # Link the pcap library
 target_link_libraries(ISA PRIVATE ${PCAP_LIBRARIES})

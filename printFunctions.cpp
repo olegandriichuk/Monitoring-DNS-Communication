@@ -2,15 +2,15 @@
 #include <netinet/ip6.h> // Для заголовків IPv6
 
 void printQuestionSection(const DNSQuestion& question) {
-    std::cout << "[Question Section]\n"
+    std::cout << "\n[Question Section]\n"
               << question.qname << ". "
               << getClassName(question.qclass) << " "
               << getTypeName(question.qtype) << "\n";
 }
 
 // Оновлена функція для друку детальної інформації про DNS для IPv4 і IPv6
-void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header, const DNSHeader* dns_header, bool isIPv6) {
-    std::string timestamp = getCurrentTimestamp();
+void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header, const DNSHeader* dns_header, bool isIPv6, const struct pcap_pkthdr* pkthdr) {
+    std::string timestamp = getCurrentTimestamp(pkthdr);
     uint16_t identifier = ntohs(dns_header->id);
     uint16_t flags = ntohs(dns_header->flags);
 
@@ -43,7 +43,7 @@ void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header,
 
     std::cout << "SrcPort: UDP/" << ntohs(udp_header->uh_sport) << "\n"
               << "DstPort: UDP/" << ntohs(udp_header->uh_dport) << "\n"
-              << "Identifier: 0x" << std::hex << identifier << std::dec << "\n"
+              << "Identifier: 0x" << std::hex << std::uppercase << identifier << std::dec << "\n"
               << "Flags: QR=" << qr
               << ", OPCODE=" << (int)opcode
               << ", AA=" << aa
@@ -55,12 +55,12 @@ void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header,
               << ", RCODE=" << (int)rcode << "\n";
 }
 
-void printBasicDNSInfo(const void* ip_header, const DNSHeader* dns_header, bool isResponse, bool isIPv6) {
+void printBasicDNSInfo(const void* ip_header, const DNSHeader* dns_header, bool isResponse, bool isIPv6, const struct pcap_pkthdr* pkthdr) {
     uint16_t qd_count = ntohs(dns_header->qd_count);
     uint16_t an_count = ntohs(dns_header->an_count);
     uint16_t ns_count = ntohs(dns_header->ns_count);
     uint16_t ar_count = ntohs(dns_header->ar_count);
-    std::string timestamp = getCurrentTimestamp();
+    std::string timestamp = getCurrentTimestamp(pkthdr);
 
     std::cout << timestamp << " ";
 
@@ -83,17 +83,17 @@ void printBasicDNSInfo(const void* ip_header, const DNSHeader* dns_header, bool 
     std::cout << "----------------------------------------\n";
 }
 void printAdditionalSection(const std::vector<DNSRecord>& answers){
-    std::cout << "[Additional  Section]\n";
+    std::cout << "\n[Additional Section]\n";
     printSection(answers);
 }
 
 void printAnswerSection(const std::vector<DNSRecord>& answers){
-    std::cout << "[Answer  Section]\n";
+    std::cout << "\n[Answer Section]\n";
     printSection(answers);
 }
 
 void printAuthoritySection(const std::vector<DNSRecord>& answers){
-    std::cout << "[Authority  Section]\n";
+    std::cout << "\n[Authority Section]\n";
     printSection(answers);
 }
 // Функція для виводу даних Answer Section

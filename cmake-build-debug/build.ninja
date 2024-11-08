@@ -73,6 +73,18 @@ build CMakeFiles/ISA.dir/parseFunctions.cpp.o: CXX_COMPILER__ISA_unscanned_Debug
   OBJECT_DIR = CMakeFiles/ISA.dir
   OBJECT_FILE_DIR = CMakeFiles/ISA.dir
 
+build CMakeFiles/ISA.dir/processPacket.cpp.o: CXX_COMPILER__ISA_unscanned_Debug /home/oleg/CLionProjects/ISA/processPacket.cpp || cmake_object_order_depends_target_ISA
+  DEP_FILE = CMakeFiles/ISA.dir/processPacket.cpp.o.d
+  FLAGS = -g -std=gnu++14 -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/ISA.dir
+  OBJECT_FILE_DIR = CMakeFiles/ISA.dir
+
+build CMakeFiles/ISA.dir/filesOperations.cpp.o: CXX_COMPILER__ISA_unscanned_Debug /home/oleg/CLionProjects/ISA/filesOperations.cpp || cmake_object_order_depends_target_ISA
+  DEP_FILE = CMakeFiles/ISA.dir/filesOperations.cpp.o.d
+  FLAGS = -g -std=gnu++14 -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles/ISA.dir
+  OBJECT_FILE_DIR = CMakeFiles/ISA.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target ISA
@@ -81,7 +93,7 @@ build CMakeFiles/ISA.dir/parseFunctions.cpp.o: CXX_COMPILER__ISA_unscanned_Debug
 #############################################
 # Link the executable ISA
 
-build ISA: CXX_EXECUTABLE_LINKER__ISA_Debug CMakeFiles/ISA.dir/main.cpp.o CMakeFiles/ISA.dir/printFunctions.cpp.o CMakeFiles/ISA.dir/helpFunctions.cpp.o CMakeFiles/ISA.dir/parseFunctions.cpp.o
+build ISA: CXX_EXECUTABLE_LINKER__ISA_Debug CMakeFiles/ISA.dir/main.cpp.o CMakeFiles/ISA.dir/printFunctions.cpp.o CMakeFiles/ISA.dir/helpFunctions.cpp.o CMakeFiles/ISA.dir/parseFunctions.cpp.o CMakeFiles/ISA.dir/processPacket.cpp.o CMakeFiles/ISA.dir/filesOperations.cpp.o
   FLAGS = -g
   LINK_LIBRARIES = -lpcap
   OBJECT_DIR = CMakeFiles/ISA.dir

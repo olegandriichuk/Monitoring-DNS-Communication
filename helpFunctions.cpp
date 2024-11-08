@@ -7,11 +7,11 @@ std::string getClassName(uint16_t qclass) {
     return (qclass == 1) ? "IN" : "UNKNOWN"; // IN - Інтернет, інші класи можна додати
 }
 
-std::string getCurrentTimestamp() {
-    time_t now = time(0);
+std::string getCurrentTimestamp(const struct pcap_pkthdr* pkthdr) {
+    time_t time = pkthdr->ts.tv_sec;
     struct tm tstruct;
     char buf[80];
-    tstruct = *localtime(&now);
+    tstruct = *localtime(&time);
     strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
     return buf;
 }

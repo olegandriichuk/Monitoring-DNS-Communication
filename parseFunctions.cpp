@@ -3,8 +3,8 @@
 //
 
 #include "parseFunctions.h"
-std::vector<std::string> domainNames;
-std::vector<std::string> domainTranslations;
+//std::vector<std::string> domainNames;
+//std::vector<std::string> domainTranslations;
 std::string parseQName(const u_char* packet, int& offset) {
     std::string qname;
     while (packet[offset] != 0) {
@@ -26,8 +26,13 @@ std::string parseQName(const u_char* packet, int& offset) {
 
 void storeDomainTranslation(const std::string& domain, const std::string& ipAddress) {
     std::string entry = domain + " " + ipAddress;
-    domainTranslations.push_back(entry);
+
+    // Перевіряємо, чи запис вже є у векторі
+    if (std::find(domainTranslations.begin(), domainTranslations.end(), entry) == domainTranslations.end()) {
+        domainTranslations.push_back(entry); // Додаємо тільки унікальні записи
+    }
 }
+
 
 
 std::string parseQNameForAnswer(const u_char* packet, int& offset, bool isIPv6) {
