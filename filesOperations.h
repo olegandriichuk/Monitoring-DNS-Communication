@@ -1,24 +1,27 @@
 //
-// Created by oleg on 8.11.24.
+// ISA project 2024: Monitorování DNS komunikace
+// Oleg Andriichuk
+// xandri07
 //
-
 #ifndef ISA_FILESOPERATIONS_H
 #define ISA_FILESOPERATIONS_H
 #include <string>
 #include <vector>
-//
-//// Extern declarations of vectors to use them across files
-////extern std::vector<std::string> domainNames;
-////extern std::vector<std::string> domainTranslations;
-//
-//// Function declarations
+
+/**
+ * @brief Save unique domains to file
+ * @param filename The name of the file to save domains to
+ */
 void saveDomainsToFile(const std::string& filename);
+
+/**
+ * @brief Save domain-IP translations to file
+ * @param filename The name of the file to save translations to
+ */
 void saveDomainTranslationsToFile(const std::string& filename);
 
 
-//void setDomainsFilename(const std::string& filename);
-//void setTranslationFilename(const std::string& filename);
-//void addDomainToFile(const std::string& domain);
-//void addTranslationToFile(const std::string& domain, const std::string& ipAddress);
+
+
 
 #endif //ISA_FILESOPERATIONS_H

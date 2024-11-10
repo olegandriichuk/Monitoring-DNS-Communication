@@ -1,10 +1,12 @@
 //
-// Created by oleg on 1.11.24.
+// ISA project 2024: Monitorování DNS komunikace
+// Oleg Andriichuk
+// xandri07
 //
 #include "helpFunctions.h"
 
 std::string getClassName(uint16_t qclass) {
-    return (qclass == 1) ? "IN" : "UNKNOWN"; // IN - Інтернет, інші класи можна додати
+    return (qclass == 1) ? "IN" : "UNKNOWN";
 }
 
 std::string getCurrentTimestamp(const struct pcap_pkthdr* pkthdr) {
@@ -18,17 +20,14 @@ std::string getCurrentTimestamp(const struct pcap_pkthdr* pkthdr) {
 
 std::string getTypeName(uint16_t qtype) {
     switch (qtype) {
-        case 1: return "A";        // Адресний запис IPv4
-        case 28: return "AAAA";    // Адресний запис IPv6
-        case 5: return "CNAME";    // Канонічне ім'я
-        case 15: return "MX";      // Поштовий обмін
+        case 1: return "A";
+        case 28: return "AAAA";
+        case 5: return "CNAME";
+        case 15: return "MX";
         case 2: return "NS";
-        case 6: return "SOA";// Сервер доменних імен
+        case 6: return "SOA";
         case 33: return "SRV";
-        default: return "UNKNOWN"; // Невідомий тип
+        default: return "UNKNOWN";
     }
 }
 
-bool isPointer(uint8_t byte) {
-    return (byte & 0xC0) == 0xC0;
-}

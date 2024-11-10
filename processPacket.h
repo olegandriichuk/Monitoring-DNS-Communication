@@ -1,5 +1,7 @@
 //
-// Created by oleg on 8.11.24.
+// ISA project 2024: Monitorování DNS komunikace
+// Oleg Andriichuk
+// xandri07
 //
 
 #ifndef ISA_PROCESSPACKET_H
@@ -15,5 +17,11 @@
 #include <arpa/inet.h>        // Для перетворення IP-адрес
 #include "printFunctions.h"
 #include "parseFunctions.h"
+/**
+ * @brief Processes a network packet and extracts DNS information if present.
+ * @param pkthdr The packet header containing metadata such as timestamp.
+ * @param packet The raw packet data to be processed.
+ * @param verbose If true, prints detailed DNS information; otherwise, prints basic info.
+ */
 void processPacket(const struct pcap_pkthdr* pkthdr, const u_char* packet, bool verbose);
 #endif //ISA_PROCESSPACKET_H

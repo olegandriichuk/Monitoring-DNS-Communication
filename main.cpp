@@ -3,12 +3,12 @@
 #include <string>
 #include <pcap.h>
 #include <csignal>  // For signal handling
-#include <netinet/ip.h>       // Для IP-заголовків
-#include <netinet/ip6.h>      // Для IP-заголовків IPv6
-#include <netinet/udp.h>      // Для UDP-заголовків
-#include <netinet/if_ether.h> // Для Ethernet-заголовків
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/udp.h>
+#include <netinet/if_ether.h>
 #include <fstream>
-#include <arpa/inet.h>        // Для перетворення IP-адрес
+#include <arpa/inet.h>
 #include "printFunctions.h"
 #include "parseFunctions.h"
 #include "processPacket.h"
@@ -36,8 +36,7 @@ void signalHandler(int signum) {
 int main(int argc, char* argv[]) {
     std::string interface;
     std::string pcapfile;
-//    std::string domainsfile;
-//    std::string translationfile;
+
     bool verbose = false;
 
     int option;

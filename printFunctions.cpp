@@ -1,5 +1,11 @@
+//
+// ISA project 2024: Monitorování DNS komunikace
+// Oleg Andriichuk
+// xandri07
+//
+
 #include "printFunctions.h"
-#include <netinet/ip6.h> // Для заголовків IPv6
+#include <netinet/ip6.h>
 
 void printQuestionSection(const  std::vector<DNSQuestion>& questions) {
     std::cout << "\n[Question Section]\n";
@@ -17,13 +23,13 @@ void printQuestionSection(const  std::vector<DNSQuestion>& questions) {
 
 }
 
-// Оновлена функція для друку детальної інформації про DNS для IPv4 і IPv6
+
 void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header, const DNSHeader* dns_header, bool isIPv6, const struct pcap_pkthdr* pkthdr) {
     std::string timestamp = getCurrentTimestamp(pkthdr);
     uint16_t identifier = ntohs(dns_header->id);
     uint16_t flags = ntohs(dns_header->flags);
 
-    // Розбір прапорців
+    // Extract flag details
     bool qr = flags & 0x8000;
     uint8_t opcode = (flags >> 11) & 0x0F;
     bool aa = flags & 0x0400;
@@ -34,10 +40,10 @@ void printVerboseDNSInfo(const void* ip_header, const struct udphdr* udp_header,
     bool cd = flags & 0x0010;
     uint8_t rcode = flags & 0x000F;
 
-    // Вивід детальної інформації
+    // Output detailed DNS information
     std::cout << "Timestamp: " << timestamp << "\n";
 
-    // Друк адрес в залежності від того, IPv4 чи IPv6
+    // Print IP addresses based on IP version
     if (isIPv6) {
         char src_ip[INET6_ADDRSTRLEN];
         char dst_ip[INET6_ADDRSTRLEN];
@@ -105,9 +111,9 @@ void printAuthoritySection(const std::vector<DNSRecord>& answers){
     std::cout << "\n[Authority Section]\n";
     printSection(answers);
 }
-// Функція для виводу даних Answer Section
+
 void printSection(const std::vector<DNSRecord>& answers) {
-//    std::cout << "[Answer Section]\n";
+
     for (const auto& record : answers) {
         if (record.type != 1 && record.type != 2 && record.type != 5 && record.type != 6 && record.type != 15 &&
             record.type != 28 && record.type != 33) {
@@ -117,7 +123,7 @@ void printSection(const std::vector<DNSRecord>& answers) {
                   << getClassName(record.dnsClass) << " "
                   << getTypeName(record.type) << " ";
 
-        // Вивід RDATA в залежності від типу запису
+            // Print RDATA based on record type
         if (record.type == 1 || record.type == 28
             || record.type == 6 || record.type == 15 || record.type == 33) {
             std::cout << record.rdata;
