@@ -19,7 +19,8 @@ void printAnswerSection(const std::vector<DNSRecord>& answers);
 void printAuthoritySection(const std::vector<DNSRecord>& answers);
 
 void printSection(const std::vector<DNSRecord>& answers);
-void printQuestionSection(const DNSQuestion& question);
+
+void printQuestionSection(const  std::vector<DNSQuestion>& questions);
 
 void printBasicDNSInfo(const void* ip_header, const DNSHeader* dns_header, bool isResponse, bool isIPv6, const struct pcap_pkthdr* pkthdr);
 #endif //ISA_PRINTFUNCTIONS_H

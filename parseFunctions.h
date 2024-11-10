@@ -21,6 +21,6 @@ std::string parseQName(const u_char* packet, int& offset);
 void storeDomainTranslation(const std::string& domain, const std::string& ipAddress);
 std::string parseQNameForAnswer(const u_char* packet, int& offset, bool isIPv6);
 
-DNSQuestion parseQuestionSection(const u_char* packet, int& offset);
+DNSQuestion parseQuestionSection(const u_char* packet, int& offset, bool isIPv6);
 DNSRecord parseDNSRecord(const u_char* packet, int& offset, bool isIPv6);
 #endif //ISA_PARSEFUNCTIONS_H

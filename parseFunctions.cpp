@@ -181,9 +181,9 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset, bool isIPv6) {
         ss << primaryNS << ". ";
 
         std::string respAuthorityMailbox = parseQNameForAnswer(packet, offset, isIPv6);
-        if (std::find(domainNames.begin(), domainNames.end(), respAuthorityMailbox) == domainNames.end()) {
-            domainNames.push_back(respAuthorityMailbox);
-        }
+//        if (std::find(domainNames.begin(), domainNames.end(), respAuthorityMailbox) == domainNames.end()) {
+//            domainNames.push_back(respAuthorityMailbox);
+//        }
         ss << respAuthorityMailbox << ". ";
 
         // Обробка полів з фіксованою довжиною: серійний номер, оновлення, повторна спроба, закінчення терміну, мінімальний TTL
@@ -245,15 +245,18 @@ DNSRecord parseDNSRecord(const u_char* packet, int& offset, bool isIPv6) {
 }
 
 
-DNSQuestion parseQuestionSection(const u_char* packet, int& offset) {
+DNSQuestion parseQuestionSection(const u_char* packet, int& offset, bool isIPv6) {
     DNSQuestion question;
-    question.qname = parseQName(packet, offset);
-    if (std::find(domainNames.begin(), domainNames.end(), question.qname) == domainNames.end()) {
-        domainNames.push_back(question.qname);
-    }
+    question.qname = parseQNameForAnswer(packet, offset, isIPv6);
+
     question.qtype = ntohs(*(uint16_t*)&packet[offset]);
     offset += 2;
     question.qclass = ntohs(*(uint16_t*)&packet[offset]);
     offset += 2;
+    if(question.qtype == 1 || question.qtype == 28 || question.qtype == 2 || question.qtype == 5 || question.qtype == 6 || question.qtype == 15 || question.qtype == 33){
+        if (std::find(domainNames.begin(), domainNames.end(), question.qname) == domainNames.end()) {
+            domainNames.push_back(question.qname);
+        }
+    }
     return question;
 }

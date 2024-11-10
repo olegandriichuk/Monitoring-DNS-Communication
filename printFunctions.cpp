@@ -1,11 +1,20 @@
 #include "printFunctions.h"
 #include <netinet/ip6.h> // Для заголовків IPv6
 
-void printQuestionSection(const DNSQuestion& question) {
-    std::cout << "\n[Question Section]\n"
-              << question.qname << ". "
-              << getClassName(question.qclass) << " "
-              << getTypeName(question.qtype) << "\n";
+void printQuestionSection(const  std::vector<DNSQuestion>& questions) {
+    std::cout << "\n[Question Section]\n";
+    for (auto & question : questions) {
+        if (question.qtype != 1 && question.qtype != 2 && question.qtype != 5 && question.qtype != 6 && question.qtype != 15 &&
+                question.qtype != 28 && question.qtype != 33) {
+            std::cout << "UNKNOWN TYPE OF QUESTION\n";
+        } else{
+            std::cout<< question.qname << ". "
+                     << getClassName(question.qclass) << " "
+                     << getTypeName(question.qtype);
+            std::cout << "\n";
+        }
+    }
+
 }
 
 // Оновлена функція для друку детальної інформації про DNS для IPv4 і IPv6
@@ -100,20 +109,24 @@ void printAuthoritySection(const std::vector<DNSRecord>& answers){
 void printSection(const std::vector<DNSRecord>& answers) {
 //    std::cout << "[Answer Section]\n";
     for (const auto& record : answers) {
+        if (record.type != 1 && record.type != 2 && record.type != 5 && record.type != 6 && record.type != 15 &&
+            record.type != 28 && record.type != 33) {
+            std::cout << "UNKNOWN TYPE OF RECORD \n";
+        } else {
         std::cout << record.name << ". " << record.ttl << " "
                   << getClassName(record.dnsClass) << " "
                   << getTypeName(record.type) << " ";
 
         // Вивід RDATA в залежності від типу запису
         if (record.type == 1 || record.type == 28
-        || record.type == 6 || record.type == 15 || record.type == 33) {
+            || record.type == 6 || record.type == 15 || record.type == 33) {
             std::cout << record.rdata;
-        }else if ( record.type == 2 || record.type == 5){
+        } else if (record.type == 2 || record.type == 5) {
             std::cout << record.rdata << ".";
-        }
-        else {
+        } else {
             std::cout << "NOT SUPPORTED";
         }
         std::cout << "\n";
+        }
     }
 }

@@ -21,11 +21,11 @@ void processPacket(const struct pcap_pkthdr* pkthdr, const u_char* packet, bool 
                 auto* dns_header = (DNSHeader*)(packet + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr));
                 bool isResponse = ntohs(dns_header->flags) & 0x8000;
                 int offset = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + sizeof(struct DNSHeader);
-
-                DNSQuestion question;
-                if (dns_header->qd_count > 0)
-                    question = parseQuestionSection(packet, offset);
-
+                std::vector<DNSQuestion> questions;
+                questions.reserve(ntohs(dns_header->qd_count));
+                for (int i = 0; i < ntohs(dns_header->qd_count); ++i) {
+                    questions.push_back(parseQuestionSection(packet, offset, false));
+                }
                 std::vector<DNSRecord> answers;
                 answers.reserve(ntohs(dns_header->an_count));
                 for (int i = 0; i < ntohs(dns_header->an_count); ++i) {
@@ -47,7 +47,9 @@ void processPacket(const struct pcap_pkthdr* pkthdr, const u_char* packet, bool 
                 if (verbose) {
 //                    std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
                     printVerboseDNSInfo(ip_header, udp_header, dns_header, false, pkthdr); // Передача pkthdr для часу
-                    printQuestionSection(question);
+                    if (!questions.empty()) {
+                        printQuestionSection(questions);
+                    }
                     if (!answers.empty()) {
                         printAnswerSection(answers);
                     }
@@ -64,7 +66,8 @@ void processPacket(const struct pcap_pkthdr* pkthdr, const u_char* packet, bool 
                 }
             }
         }
-    } else if (ntohs(eth_header->ether_type) == ETHERTYPE_IPV6) {
+    }
+    else if (ntohs(eth_header->ether_type) == ETHERTYPE_IPV6) {
         // Обробка IPv6
         auto* ip6_header = (struct ip6_hdr*)(packet + sizeof(struct ether_header));
         if (ip6_header->ip6_nxt == IPPROTO_UDP) {
@@ -75,9 +78,11 @@ void processPacket(const struct pcap_pkthdr* pkthdr, const u_char* packet, bool 
                 bool isResponse = ntohs(dns_header->flags) & 0x8000;
                 int offset = sizeof(struct ether_header) + sizeof(struct ip6_hdr) + sizeof(struct udphdr) + sizeof(struct DNSHeader);
 
-                DNSQuestion question;
-                if (dns_header->qd_count > 0)
-                    question = parseQuestionSection(packet, offset);
+                std::vector<DNSQuestion> questions;
+                questions.reserve(ntohs(dns_header->qd_count));
+                for (int i = 0; i < ntohs(dns_header->qd_count); ++i) {
+                    questions.push_back(parseQuestionSection(packet, offset, true));
+                }
 
                 std::vector<DNSRecord> answers;
                 answers.reserve(ntohs(dns_header->an_count));
@@ -100,7 +105,9 @@ void processPacket(const struct pcap_pkthdr* pkthdr, const u_char* packet, bool 
                 if (verbose) {
 //                    std::cout << "NUMBER OF PACKET IS " << numberOfPacket << std::endl;
                     printVerboseDNSInfo(ip6_header, udp_header, dns_header, true, pkthdr); // Передача pkthdr для часу
-                    printQuestionSection(question);
+                    if (!questions.empty()) {
+                        printQuestionSection(questions);
+                    }
                     if (!answers.empty()) {
                         printAnswerSection(answers);
                     }
