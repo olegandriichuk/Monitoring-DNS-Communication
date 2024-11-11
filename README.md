@@ -16,7 +16,7 @@ Pro monitorování DNS dotazů na konkrétním síťovém rozhraní (například
 
 ```bash
 ./dns-monitor -i eth0
-
+```
 
 ## Příklad spuštění 2: Monitorování s verbose režimem
 
@@ -24,20 +24,20 @@ Přidáním volby `-v` přepne program do verbose režimu, ve kterém zobrazí p
 
 ```bash
 ./dns-monitor -i eth0 -v
-
+```
 ## Příklad 3: Monitorování s logováním domén a překladů
 Tento příkaz spustí program na rozhraní eth0, uloží doménová jména do souboru domains.txt a překlady domén na IP adresy do souboru translations.txt.
 
 ```bash 
 ./dns-monitor -i eth0 -d domains.txt -t translations.txt
-
+```
 
 ## Příklad 4:  Monitorování DNS z PCAP souboru
 Program může být spuštěn ve způsobu čtení z PCAP souboru. Výsledky budou uloženy do domains.txt pro doménová jména a translations.txt pro překlady domén na IP adresy.
 
 ```bash 
 ./dns-monitor -p ok.pcap -d domains.txt -t translations.txt
-
+```
 
 # List of All Files
 
