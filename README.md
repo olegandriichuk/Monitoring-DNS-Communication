@@ -1,4 +1,4 @@
-#Projekt do předmětu Síťové aplikace a správa sítí
+# Projekt do předmětu Síťové aplikace a správa sítí
 
 **Author:** Oleg Andriichuk  
 **Login:** xandri07  
