@@ -67,5 +67,8 @@ parseFunctions.h
 
 printFunctions.c
 printFunctions.h
+
+helpFunctions.c
+helpFunctions.h
 ```
 
