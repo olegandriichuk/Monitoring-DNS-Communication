@@ -1,0 +1,7 @@
+# ninja log v6
+4	511	1730983649673262926	CMakeFiles/ISA.dir/printFunctions.cpp.o	c1d5f7e99765a5b5
+400	540	1730986824421433095	ISA	d019116f82d2dd5b
+1	400	1730986824022433073	CMakeFiles/ISA.dir/parseFunctions.cpp.o	edab06afa2dbfc5
+4	230	1730983649673262926	CMakeFiles/ISA.dir/helpFunctions.cpp.o	bfcdd274399340e4
+1	560	1730985871506382018	CMakeFiles/ISA.dir/main.cpp.o	54a4bbfa15be5cfa
+0	81	1731075745560027524	build.ninja	8b35b5aa430fd5f9
